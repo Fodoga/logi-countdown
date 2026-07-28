@@ -17,6 +17,7 @@
     "⚠️ 距36h不足12h": "st-urgent",
     "✅ 正常": "st-normal",
     "✅ 已完成": "st-done",
+    "🚚 已发货无物流": "st-shippednologi",
     "⛔ 已取消": "st-cancel",
     "⚠️ 缺付款时间": "st-nopay",
   };
@@ -468,6 +469,7 @@
       { c: "s-final", icon: "📋", num: res.final.length, lab: "最终模板" },
       { c: "s-timeout", icon: "⏰", num: countStatus(cd, "⏰ 超36h未发货"), lab: "⏰ 超36h未发货" },
       { c: "s-urgent", icon: "⚠️", num: countStatus(cd, "⚠️ 距36h不足12h"), lab: "⚠️ 距36h不足12h" },
+      { c: "s-shippednologi", icon: "🚚", num: countStatus(cd, "🚚 已发货无物流"), lab: "🚚 已发货无物流" },
       { c: "s-done", icon: "🏁", num: countStatus(cd, "✅ 已完成") + countStatus(cd, "⛔ 已取消") + countStatus(cd, "⚠️ 缺付款时间"), lab: "已完成/取消/缺时" },
       { c: "s-fb", icon: "📨", num: pendingFeedbackCount(), lab: "待供应商确认" },
     ];
@@ -648,7 +650,7 @@
   }
   function isUrgent(r) {
     const st = r["状态监控"] || "";
-    return st === "⏰ 超36h未发货" || st === "⚠️ 距36h不足12h";
+    return st === "⏰ 超36h未发货" || st === "⚠️ 距36h不足12h" || st === "🚚 已发货无物流";
   }
   function numClass(hours) {
     const n = parseFloat(hours);
@@ -749,9 +751,10 @@
     if (!urgent.length) { box.hidden = true; return; }
     box.hidden = false;
     const timeout = urgent.filter((r) => (r["状态监控"] || "") === "⏰ 超36h未发货").length;
-    const soon = urgent.length - timeout;
+    const soon = urgent.filter((r) => (r["状态监控"] || "") === "⚠️ 距36h不足12h").length;
+    const noship = urgent.filter((r) => (r["状态监控"] || "") === "🚚 已发货无物流").length;
     $("uc-desc").textContent =
-      `共 ${urgent.length} 笔订单需要尽快处理：超36h未发货 ${timeout} 笔、距36h不足12h ${soon} 笔。请优先联系对应供应商确认发货。`;
+      `共 ${urgent.length} 笔订单需要跟进：超36h未发货 ${timeout} 笔、距36h不足12h ${soon} 笔、已发货无物流 ${noship} 笔。已发货无物流请督促供应商补录快递单号，其余请确认发货。`;
   }
 
   /* ================= 供应商联动反馈 ================= */
@@ -808,8 +811,8 @@
       .sort((a, b) => parseFloat(a["剩余(小时)"]) - parseFloat(b["剩余(小时)"]));
     if (!rows.length) {
       const msg = q
-        ? `没有匹配「${esc(fbSearch)}」的「距36h不足12h / 超36h未发货」订单。`
-        : `当前视角下没有「距36h不足12h / 超36h未发货」的订单需要反馈。`;
+        ? `没有匹配「${esc(fbSearch)}」的「距36h不足12h / 超36h未发货 / 已发货无物流」订单。`
+        : `当前视角下没有「距36h不足12h / 超36h未发货 / 已发货无物流」的订单需要反馈。`;
       table.innerHTML = `<tbody><tr><td>${msg}</td></tr></tbody>`;
       renderPager("fb-pager", 1, 1, () => {}, 0);
       return;
@@ -891,7 +894,7 @@
       // 仅含紧急/超时订单（即需要反馈的对象）
       return isUrgent(r);
     });
-    if (!list.length) { alert("当前选择下没有「距36h不足12h / 超36h未发货」的订单需要反馈。"); return; }
+    if (!list.length) { alert("当前选择下没有「距36h不足12h / 超36h未发货 / 已发货无物流」的订单需要反馈。"); return; }
     const cols = ["订单号", "供应商名称", "商品名称", "快递公司", "订单状态", "物流状态", "快递单号", "付款时间", "最晚发货时间", "剩余(小时)", "状态监控", "是否已完成发货", "反馈原因"];
     const out = list.map((r) => {
       const o = {};
