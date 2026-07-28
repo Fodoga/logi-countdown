@@ -821,7 +821,7 @@
     const start = (fbPage - 1) * FB_PAGE_SIZE;
     const pageRows = rows.slice(start, start + FB_PAGE_SIZE);
 
-    const cols = ["订单号", "供应商名称", "商品名称", "状态监控", "剩余(小时)", "最晚发货时间", "是否已完成发货", "反馈原因", "反馈时间"];
+    const cols = ["订单号", "供应商名称", "商品名称", "快递公司", "快递单号", "订单状态", "物流状态", "状态监控", "剩余(小时)", "最晚发货时间", "是否已完成发货", "反馈原因", "反馈时间"];
     let html = "<thead><tr>" + cols.map((c) => `<th>${esc(c)}</th>`).join("") + "</tr></thead><tbody>";
     pageRows.forEach((r) => {
       const no = r["订单号"];
@@ -835,6 +835,10 @@
         if (c === "订单号") html += `<td>${esc(no)}</td>`;
         else if (c === "供应商名称") html += `<td>${esc(r["供应商名称"])}</td>`;
         else if (c === "商品名称") html += `<td>${esc(r["商品名称"] || "")}</td>`;
+        else if (c === "快递公司") html += `<td>${esc(r["快递公司"] || "")}</td>`;
+        else if (c === "快递单号") html += `<td>${esc(r["快递单号"] || "")}</td>`;
+        else if (c === "订单状态") html += `<td>${esc(r["订单状态"] || "")}</td>`;
+        else if (c === "物流状态") html += `<td>${esc(r["物流状态"] || "")}</td>`;
         else if (c === "状态监控") { const sc = STATUS_CLASS[r["状态监控"]] || ""; html += `<td><span class="badge ${sc}">${esc(r["状态监控"])}</span></td>`; }
         else if (c === "剩余(小时)") html += `<td class="${numClass(r["剩余(小时)"])}">${esc(r["剩余(小时)"])}</td>`;
         else if (c === "最晚发货时间") html += `<td>${esc(r["最晚发货时间"])}</td>`;
@@ -888,7 +892,7 @@
       return isUrgent(r);
     });
     if (!list.length) { alert("当前选择下没有「距36h不足12h / 超36h未发货」的订单需要反馈。"); return; }
-    const cols = ["订单号", "供应商名称", "商品名称", "订单状态", "物流状态", "快递单号", "付款时间", "最晚发货时间", "剩余(小时)", "状态监控", "是否已完成发货", "反馈原因"];
+    const cols = ["订单号", "供应商名称", "商品名称", "快递公司", "订单状态", "物流状态", "快递单号", "付款时间", "最晚发货时间", "剩余(小时)", "状态监控", "是否已完成发货", "反馈原因"];
     const out = list.map((r) => {
       const o = {};
       cols.forEach((c) => {
