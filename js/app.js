@@ -13,12 +13,12 @@
   ];
 
   const STATUS_CLASS = {
-    "已超时": "st-timeout",
-    "不足12小时": "st-urgent",
-    "正常": "st-normal",
-    "已完成": "st-done",
-    "已取消": "st-cancel",
-    "缺付款时间": "st-nopay",
+    "⏰ 超36h未发货": "st-timeout",
+    "⚠️ 距36h不足12h": "st-urgent",
+    "✅ 正常": "st-normal",
+    "✅ 已完成": "st-done",
+    "⛔ 已取消": "st-cancel",
+    "⚠️ 缺付款时间": "st-nopay",
   };
 
   const FB_KEY = "qiaofei_logi_feedback_v1";
@@ -120,14 +120,14 @@
       const m = ensure(sup);
       m.total++;
       const st = r["状态监控"] || "";
-      if (st === "已超时") m.timeout++;
-      else if (st === "不足12小时") m.urgent12++;
-      else if (st === "正常") m.normal++;
-      else if (st === "已完成") m.done++;
-      else if (st === "已取消") m.cancel++;
-      else if (st === "缺付款时间") m.missingPay++;
+      if (st === "⏰ 超36h未发货") m.timeout++;
+      else if (st === "⚠️ 距36h不足12h") m.urgent12++;
+      else if (st === "✅ 正常") m.normal++;
+      else if (st === "✅ 已完成") m.done++;
+      else if (st === "⛔ 已取消") m.cancel++;
+      else if (st === "⚠️ 缺付款时间") m.missingPay++;
       // 反馈统计（仅对紧急/超时单计 pendingFb）
-      if (st === "已超时" || st === "不足12小时") {
+      if (st === "⏰ 超36h未发货" || st === "⚠️ 距36h不足12h") {
         const f = fb[r["订单号"]];
         if (f && f.status === "已发货") m.shipped++;
         else if (f && f.status === "未发货") m.notShipped++;
@@ -152,7 +152,7 @@
     const h = loadHistory();
     const day = todayStr();
     const metrics = computeDailyMetrics(currentResult, feedback);
-    // 只归档「有风险」的供应商（超时>0 或 不足12小时>0），无风险的当日不进累计
+    // 只归档「有风险」的供应商（超36h未发货>0 或 距36h不足12h>0），无风险的当日不进累计
     const riskSuppliers = {};
     let riskTotal = 0;
     Object.keys(metrics.perSupplier).forEach((s) => {
@@ -451,7 +451,7 @@
     let n = 0;
     viewRows().forEach((r) => {
       const st = r["状态监控"] || "";
-      if (st === "已超时" || st === "不足12小时") {
+      if (st === "⏰ 超36h未发货" || st === "⚠️ 距36h不足12h") {
         const f = feedback[r["订单号"]];
         if (!f || !f.status || f.status === "待确认") n++;
       }
@@ -466,9 +466,9 @@
       { c: "s-remove", icon: "🗑️", num: res.removed, lab: "筛选剔除" },
       { c: "s-dup", icon: "🔁", num: res.dupRemoved, lab: "去重剔除" },
       { c: "s-final", icon: "📋", num: res.final.length, lab: "最终模板" },
-      { c: "s-timeout", icon: "⏰", num: countStatus(cd, "已超时"), lab: "已超时" },
-      { c: "s-urgent", icon: "⚠️", num: countStatus(cd, "不足12小时"), lab: "不足12小时" },
-      { c: "s-done", icon: "🏁", num: countStatus(cd, "已完成") + countStatus(cd, "已取消") + countStatus(cd, "缺付款时间"), lab: "已完成/取消/缺时" },
+      { c: "s-timeout", icon: "⏰", num: countStatus(cd, "⏰ 超36h未发货"), lab: "⏰ 超36h未发货" },
+      { c: "s-urgent", icon: "⚠️", num: countStatus(cd, "⚠️ 距36h不足12h"), lab: "⚠️ 距36h不足12h" },
+      { c: "s-done", icon: "🏁", num: countStatus(cd, "✅ 已完成") + countStatus(cd, "⛔ 已取消") + countStatus(cd, "⚠️ 缺付款时间"), lab: "已完成/取消/缺时" },
       { c: "s-fb", icon: "📨", num: pendingFeedbackCount(), lab: "待供应商确认" },
     ];
     $("summary").innerHTML = cards.map((k) =>
@@ -633,7 +633,7 @@
     return viewRows().filter((r) => {
       if (urgentOnly) {
         const st = r["状态监控"] || "";
-        if (st !== "已超时" && st !== "不足12小时") return false;
+        if (st !== "⏰ 超36h未发货" && st !== "⚠️ 距36h不足12h") return false;
       }
       for (const col in filterState) {
         const fv = filterState[col];
@@ -648,7 +648,7 @@
   }
   function isUrgent(r) {
     const st = r["状态监控"] || "";
-    return st === "已超时" || st === "不足12小时";
+    return st === "⏰ 超36h未发货" || st === "⚠️ 距36h不足12h";
   }
   function numClass(hours) {
     const n = parseFloat(hours);
@@ -698,7 +698,7 @@
     let html = "<thead><tr>" + cols.map((c) => `<th>${esc(c)}</th>`).join("") + "</tr></thead><tbody>";
     pageRows.forEach((r) => {
       const urgent = isUrgent(r);
-      const rowCls = r["状态监控"] === "已超时" ? "row-timeout" : (urgent ? "row-urgent" : "");
+      const rowCls = r["状态监控"] === "⏰ 超36h未发货" ? "row-timeout" : (urgent ? "row-urgent" : "");
       html += `<tr class="${rowCls}">`;
       cols.forEach((c) => {
         let v = r[c];
@@ -748,10 +748,10 @@
     const box = $("urgent-callout");
     if (!urgent.length) { box.hidden = true; return; }
     box.hidden = false;
-    const timeout = urgent.filter((r) => (r["状态监控"] || "") === "已超时").length;
+    const timeout = urgent.filter((r) => (r["状态监控"] || "") === "⏰ 超36h未发货").length;
     const soon = urgent.length - timeout;
     $("uc-desc").textContent =
-      `共 ${urgent.length} 笔订单需要尽快处理：已超时 ${timeout} 笔、不足 12 小时 ${soon} 笔。请优先联系对应供应商确认发货。`;
+      `共 ${urgent.length} 笔订单需要尽快处理：超36h未发货 ${timeout} 笔、距36h不足12h ${soon} 笔。请优先联系对应供应商确认发货。`;
   }
 
   /* ================= 供应商联动反馈 ================= */
@@ -769,7 +769,7 @@
     const suppliers = currentResult
       ? Array.from(new Set(currentResult.countdown.map((r) => r["供应商名称"] || "").filter((v) => v)))
       : [];
-    // 按"风险订单数"（已超时 + 不足12小时）从多到少排序；并列则按名称
+    // 按"风险订单数"（超36h未发货 + 距36h不足12h）从多到少排序；并列则按名称
     const riskCount = {};
     if (currentResult) {
       currentResult.countdown.forEach((r) => {
@@ -794,7 +794,7 @@
     if (!currentResult) { table.innerHTML = '<tbody><tr><td>请先上传并处理源数据。</td></tr></tbody>'; return; }
     // 供应商视图：锁定到 lockedSupplier
     const viewSup = role === "supplier" && lockedSupplier ? lockedSupplier : fbSupplier;
-    // 联动反馈只针对「不足12小时」与「已超时」的订单
+    // 联动反馈只针对「距36h不足12h」与「超36h未发货」的订单
     const q = fbSearch.trim().toLowerCase();
     const rows = viewRows()
       .filter(isUrgent)
@@ -808,8 +808,8 @@
       .sort((a, b) => parseFloat(a["剩余(小时)"]) - parseFloat(b["剩余(小时)"]));
     if (!rows.length) {
       const msg = q
-        ? `没有匹配「${esc(fbSearch)}」的「不足12小时 / 已超时」订单。`
-        : `当前视角下没有「不足12小时 / 已超时」的订单需要反馈。`;
+        ? `没有匹配「${esc(fbSearch)}」的「距36h不足12h / 超36h未发货」订单。`
+        : `当前视角下没有「距36h不足12h / 超36h未发货」的订单需要反馈。`;
       table.innerHTML = `<tbody><tr><td>${msg}</td></tr></tbody>`;
       renderPager("fb-pager", 1, 1, () => {}, 0);
       return;
@@ -828,7 +828,7 @@
       const f = feedback[no] || {};
       const urgent = isUrgent(r);
       const fstatus = f.status || (urgent ? "待确认" : "");
-      const rowCls = r["状态监控"] === "已超时" ? "row-timeout" : (urgent ? "row-urgent" : "");
+      const rowCls = r["状态监控"] === "⏰ 超36h未发货" ? "row-timeout" : (urgent ? "row-urgent" : "");
       const selCls = fstatus === "已发货" ? "done" : (fstatus === "未发货" ? "none" : (fstatus === "待确认" ? "wait" : ""));
       html += `<tr class="${rowCls}" data-no="${esc(no)}">`;
       cols.forEach((c) => {
@@ -887,7 +887,7 @@
       // 仅含紧急/超时订单（即需要反馈的对象）
       return isUrgent(r);
     });
-    if (!list.length) { alert("当前选择下没有「不足12小时 / 已超时」的订单需要反馈。"); return; }
+    if (!list.length) { alert("当前选择下没有「距36h不足12h / 超36h未发货」的订单需要反馈。"); return; }
     const cols = ["订单号", "供应商名称", "商品名称", "订单状态", "物流状态", "快递单号", "付款时间", "最晚发货时间", "剩余(小时)", "状态监控", "是否已完成发货", "反馈原因"];
     const out = list.map((r) => {
       const o = {};
