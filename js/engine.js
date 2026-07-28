@@ -187,10 +187,12 @@
       // 已发货 但 物流状态含"无物流"时，视为未真正揽收，继续按倒计时监控
       const shipped = st === "已发货" || /已发货|已发出|已寄出|已交运/.test(st);
       if (shipped && !/无物流/.test(logi)) status = "✅ 已完成";
+      else if (shipped && /无物流/.test(logi)) status = "🚚 已发货无物流";
       else if (st === "已取消") status = "⛔ 已取消";
       else {
-        // 待发货 / 已发货但无物流 / 其他未明确发货的状态：按付款时间算倒计时预警
+        // 待发货 / 其他未明确发货的状态：按付款时间算倒计时预警
         // 发货时限 = 付款时间 + 36 小时（即最晚发货时间）；超过即「超36h未发货」
+        // 注意：「已发货 + 无物流」不再进入倒计时分支，单独标记为「🚚 已发货无物流」
         const pay = parsePayTime(r[payCol]);
         if (!pay) status = "⚠️ 缺付款时间";
         else {
@@ -218,7 +220,7 @@
       const st = normVal(r["状态监控"]);
       if (!counter[sup]) counter[sup] = { 已超时: 0, 紧急: 0 };
       if (st === "⏰ 超36h未发货") counter[sup].已超时++;
-      else if (st === "⚠️ 距36h不足12h") counter[sup].紧急++;
+      else if (st === "⚠️ 距36h不足12h" || st === "🚚 已发货无物流") counter[sup].紧急++;
     });
     return Object.keys(counter)
       .map((sup) => ({ sup, 已超时: counter[sup].已超时, 紧急: counter[sup].紧急, risk: counter[sup].已超时 + counter[sup].紧急 }))
