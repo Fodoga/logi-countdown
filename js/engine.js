@@ -1,7 +1,8 @@
 /* engine.js — 物流倒计时预警 核心处理引擎（浏览器/Node 通用）
  * 逻辑严格对齐本地 process_orders.py：9家湖南供应商剔除、
  * 订单状态白名单(仅留 已发货/待发货)、物流状态白名单(仅留 空/无物流任意重复)、
- * 快递单号去重、最晚发货=付款时间+1.5天、剩余天/小时、状态监控、Top10。
+ * 快递单号去重、最晚发货=付款时间+36小时(1.5天)、剩余天/小时、状态监控、Top10。
+ * 状态监控：⏰超36h未发货(付款后36h仍未发货) / ⚠️距36h不足12h(临界) / ✅正常 / ✅已完成 / ⛔已取消。
  */
 (function (global) {
   "use strict";
@@ -185,20 +186,21 @@
       let status = "", latest = null, remDays = "", remHours = "";
       // 已发货 但 物流状态含"无物流"时，视为未真正揽收，继续按倒计时监控
       const shipped = st === "已发货" || /已发货|已发出|已寄出|已交运/.test(st);
-      if (shipped && !/无物流/.test(logi)) status = "已完成";
-      else if (st === "已取消") status = "已取消";
+      if (shipped && !/无物流/.test(logi)) status = "✅ 已完成";
+      else if (st === "已取消") status = "⛔ 已取消";
       else {
         // 待发货 / 已发货但无物流 / 其他未明确发货的状态：按付款时间算倒计时预警
+        // 发货时限 = 付款时间 + 36 小时（即最晚发货时间）；超过即「超36h未发货」
         const pay = parsePayTime(r[payCol]);
-        if (!pay) status = "缺付款时间";
+        if (!pay) status = "⚠️ 缺付款时间";
         else {
-          latest = new Date(pay.getTime() + 1.5 * 86400000);
+          latest = new Date(pay.getTime() + 1.5 * 86400000); // 1.5天 = 36小时
           const rem_h = (latest - now) / 3600000;
           remHours = rem_h.toFixed(1);
           remDays = (rem_h / 24).toFixed(1);
-          if (rem_h < 0) status = "已超时";
-          else if (rem_h < 12) status = "不足12小时";
-          else status = "正常";
+          if (rem_h < 0) status = "⏰ 超36h未发货";
+          else if (rem_h < 12) status = "⚠️ 距36h不足12h";
+          else status = "✅ 正常";
         }
       }
       out["最晚发货时间"] = latest ? fmtDateTime(latest) : "";
@@ -215,8 +217,8 @@
       const sup = normVal(r[supCol]) || "(未知)";
       const st = normVal(r["状态监控"]);
       if (!counter[sup]) counter[sup] = { 已超时: 0, 紧急: 0 };
-      if (st === "已超时") counter[sup].已超时++;
-      else if (st === "不足12小时") counter[sup].紧急++;
+      if (st === "⏰ 超36h未发货") counter[sup].已超时++;
+      else if (st === "⚠️ 距36h不足12h") counter[sup].紧急++;
     });
     return Object.keys(counter)
       .map((sup) => ({ sup, 已超时: counter[sup].已超时, 紧急: counter[sup].紧急, risk: counter[sup].已超时 + counter[sup].紧急 }))
