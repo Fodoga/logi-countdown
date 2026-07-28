@@ -300,6 +300,7 @@ main {
 .sum.s-final  { background: linear-gradient(180deg, #EAF2FF, #fff); }
 .sum.s-timeout{ background: linear-gradient(180deg, #FFE6EA, #fff); }
 .sum.s-urgent { background: linear-gradient(180deg, #FFEFE0, #fff); }
+.sum.s-shippednologi { background: linear-gradient(180deg, #FFF7DB, #fff); }
 .sum.s-done   { background: linear-gradient(180deg, #F1F4F6, #fff); }
 .sum.s-fb     { background: linear-gradient(180deg, #FFF0F4, #fff); }
 .sum.s-fb-none{ background: linear-gradient(180deg, #FFE9EC, #fff); }
@@ -451,6 +452,7 @@ tbody tr:hover { background: #FFF1F6; }
 }
 .st-timeout { background: #FF5C6C; color: #fff; }
 .st-urgent  { background: #FF9F45; color: #fff; }
+.st-shippednologi { background: #F2B705; color: #4A3A00; }
 .st-normal  { background: #4CAF85; color: #fff; }
 .st-done    { background: #9DB4C0; color: #fff; }
 .st-cancel  { background: #B7B0A8; color: #fff; }
