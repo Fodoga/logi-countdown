@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>物流倒计时预警台</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- 顶部导航 -->
+  <nav class="topnav">
+    <div class="nav-brand">📦 物流倒计时预警台</div>
+    <div class="nav-links">
+      <a href="#sec-upload">上传</a>
+      <a href="#sec-summary">概览</a>
+      <a href="#sec-cum">累计看板</a>
+      <a href="#sec-charts">看板</a>
+      <a href="#sec-table">模板</a>
+      <a href="#sec-feedback">供应商反馈</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="hero-emoji">📦</div>
+    <h1>物流倒计时预警台</h1>
+    <p class="subtitle">每天上传两份源数据，自动跑出倒计时预警最终模板 · 纯本地运行，数据不出电脑</p>
+    <div class="role-switch">
+      <span class="role-label">打开方式：</span>
+      <select id="role-toggle">
+        <option value="manager">👔 管理总览（我方：看全部 + 累计看板）</option>
+        <option value="supplier">🏭 供应商视图（只看我方物流 + 反馈）</option>
+      </select>
+    </div>
+    <div id="role-banner" class="role-banner" hidden></div>
+  </header>
+
+  <main>
+    <!-- 使用说明 -->
+    <section class="card guide-card" id="sec-guide" data-collapse>
+      <div class="card-head">
+        <h2 class="card-title">📖 使用说明（首次使用请先看这里）</h2>
+        <button class="collapse-btn" type="button" aria-label="收起/展开">▾</button>
+      </div>
+      <div class="card-body">
+        <div class="guide-body">
+          <ol>
+            <li><b>准备两个源文件</b>：① 订单源文件（含订单号、供应商、订单状态、物流状态、付款时间、快递单号、商品名称等列）；② 快递源文件（仅含快递单号列，用于去重）。支持 <code>.xlsx / .xls / .csv</code>。</li>
+            <li><b>上传并运行</b>：把两个文件拖入（或点击选择）上方对应区域，点「▶ 开始处理」。上传前会自动预检列名，缺列会红字提示。</li>
+            <li><b>查看预警</b>：页面自动生成概览、可视化看板、倒计时预警最终模板（已超时/不足12小时订单会高亮）。可用搜索框与下拉筛选定位订单，点「⬇ 导出 Excel / CSV」保存最终模板。</li>
+            <li><b>供应商联动反馈</b>：进入「⑥ 供应商联动反馈」→ 点「📤 导出待确认清单」发给供应商 → 供应商打开本网页选中自己名字，对不足12小时/已超时的订单确认「是否已完成发货」→ 点「📤 导出反馈」回传 → 你点「📥 导入反馈文件」一键汇总。</li>
+            <li><b>数据同步（更新给供应商）</b>：你更新源数据并跑出最新看板后，点「📤 导出数据快照」生成一个几 KB 的 <code>.json</code> 发给供应商；他点「📥 导入数据快照」即加载你的最新看板（含你的反馈）。无需重发整个文件夹。</li>
+            <li><b>试一试</b>：不想先找文件？点「🎲 一键生成示例演示」或「⬇ 下载示例数据」先跑通流程。</li>
+          </ol>
+          <p class="guide-note">💡 纯本地运行，数据不出电脑。建议用 Chrome / Edge 打开；若读 <code>.xlsx</code> 报错，可先将源文件另存为 <code>.csv</code> 再上传。订单号、快递单号全程以文本保存，不会被改动。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ① 上传 -->
+    <section class="card upload-card" id="sec-upload" data-collapse>
+      <div class="card-head">
+        <h2 class="card-title">① 上传源数据</h2>
+        <button class="collapse-btn" type="button" aria-label="收起/展开">▾</button>
+      </div>
+      <div class="card-body">
+        <div class="upload-grid">
+          <label class="dropzone" id="dz-order">
+            <input type="file" id="file-order" accept=".xlsx,.xls,.csv" hidden />
+            <div class="dz-inner">
+              <span class="dz-emoji">📄</span>
+              <span class="dz-text">订单源文件</span>
+              <span class="dz-hint">.xlsx / .xls / .csv</span>
+              <span class="dz-name" id="name-order">未选择</span>
+            </div>
+          </label>
+          <label class="dropzone" id="dz-track">
+            <input type="file" id="file-track" accept=".xlsx,.xls,.csv" hidden />
+            <div class="dz-inner">
+              <span class="dz-emoji">🚚</span>
+              <span class="dz-text">快递源文件</span>
+              <span class="dz-hint">.xlsx / .xls / .csv（仅含快递单号列）</span>
+              <span class="dz-name" id="name-track">未选择</span>
+            </div>
+          </label>
+        </div>
+        <div class="actions">
+          <button id="btn-run" class="btn primary">▶ 开始处理</button>
+          <button id="btn-sample" class="btn ghost">🎲 一键生成示例演示</button>
+          <button id="btn-download-sample" class="btn ghost" type="button">⬇ 下载示例数据</button>
+          <button id="btn-import-snapshot" class="btn ghost" type="button">📥 导入数据快照</button>
+          <input type="file" id="file-snapshot" accept=".json" hidden />
+        </div>
+        <div id="status" class="status" hidden></div>
+      </div>
+    </section>
+
+    <!-- 结果 -->
+    <div id="result-section" hidden>
+      <!-- ② 概览 -->
+      <section class="card" id="sec-summary" data-collapse>
+        <div class="card-head">
+          <h2 class="card-title">② 处理概览</h2>
+          <button class="collapse-btn" type="button" aria-label="收起/展开">▾</button>
+        </div>
+        <div class="card-body">
+          <div class="summary-grid" id="summary"></div>
+        </div>
+      </section>
+
+      <!-- ②-B 累计汇总看板（仅管理总览） -->
+      <section class="card manager-only" id="sec-cum" data-collapse>
+        <div class="card-head">
+          <h2 class="card-title">⑦ 累计汇总看板</h2>
+          <button class="collapse-btn" type="button" aria-label="收起/展开">▾</button>
+        </div>
+        <div class="card-body">
+          <p class="cum-intro">
+            每天处理完源数据后点「📅 归档今日看板」，系统按日期累计各供应商的发货预警情况（累计超时单数、累计未发货反馈等）。
+            跨天累加，形成趋势看板，无需联网。<b>归档时只统计今日有风险订单（超时/不足12小时）的供应商。</b>
+          </p>
+          <div class="summary-grid" id="cum-summary"></div>
+          <div class="cum-actions">
+            <button id="btn-archive-today" class="btn primary" type="button">📅 归档今日看板</button>
+            <button id="btn-export-cum" class="btn ghost" type="button">⬇ 导出累计汇总</button>
+            <button id="btn-clear-cum" class="btn danger ghost" type="button">🗑 清空累计数据</button>
+          </div>
+          <div class="cum-layout">
+            <div class="cum-table-wrap">
+              <div id="cumulative-body"></div>
+            </div>
+            <div class="cum-chart-wrap">
+              <h3>各供应商累计超时单数</h3>
+              <canvas id="chart-cum"></canvas>
+              <div class="legend" id="legend-cum"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ③ 看板 -->
+      <section class="card" id="sec-charts" data-collapse>
+        <div class="card-head">
+          <h2 class="card-title">③ 可视化看板</h2>
+          <button class="collapse-btn" type="button" aria-label="收起/展开">▾</button>
+        </div>
+        <div class="card-body">
+          <div class="charts-grid">
+            <div class="chart-card">
+              <h3>订单状态分布</h3>
+              <canvas id="chart-order"></canvas>
+              <div class="legend" id="legend-order"></div>
+            </div>
+            <div class="chart-card">
+              <h3>物流状态分布</h3>
+              <canvas id="chart-log"></canvas>
+              <div class="legend" id="legend-log"></div>
+            </div>
+            <div class="chart-card">
+              <h3>预警状态分布</h3>
+              <canvas id="chart-status"></canvas>
+              <div class="legend" id="legend-status"></div>
+            </div>
+            <div class="chart-card wide">
+              <h3>Top10 供应商风险（已超时+紧急）</h3>
+              <canvas id="chart-top"></canvas>
+              <div class="legend" id="legend-top"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ④ 最终模板 -->
+      <section class="card" id="sec-table" data-collapse>
+        <div class="card-head">
+          <h2 class="card-title">④ 倒计时预警（最终模板）</h2>
+          <button class="collapse-btn" type="button" aria-label="收起/展开">▾</button>
+        </div>
+        <div class="card-body">
+          <div class="urgent-callout" id="urgent-callout" hidden>
+            <span class="uc-emoji">🚨</span>
+            <div class="uc-text">
+              <b id="uc-title">紧急待办</b>
+              <span id="uc-desc"></span>
+            </div>
+            <button class="btn small ghost" id="btn-urgent-jump" type="button">只看紧急订单</button>
+          </div>
+
+          <div class="table-tools">
+            <input id="search" class="search" type="text" placeholder="🔍 全局搜索（订单号 / 供应商 / 状态…）" />
+            <div id="col-filters" class="col-filters"></div>
+            <div class="export-btns">
+              <button id="btn-xlsx" class="btn small">⬇ 导出 Excel</button>
+              <button id="btn-csv" class="btn small">⬇ 导出 CSV</button>
+              <button id="btn-export-snapshot" class="btn small ghost" type="button">📤 导出数据快照</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table id="table-main"></table>
+          </div>
+          <div class="pager" id="table-pager"></div>
+
+          <details class="removed-box" id="sec-removed">
+            <summary>⑤ 已剔除明细（<span id="removed-count">0</span> 行，点击展开）</summary>
+            <div class="table-tools">
+              <button id="btn-removed-xlsx" class="btn small ghost">⬇ 导出已剔除 Excel</button>
+              <button id="btn-removed-csv" class="btn small ghost">⬇ 导出已剔除 CSV</button>
+            </div>
+            <div class="table-wrap">
+              <table id="table-removed"></table>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <!-- ⑥ 供应商联动反馈 -->
+      <section class="card" id="sec-feedback" data-collapse>
+        <div class="card-head">
+          <h2 class="card-title">⑥ 供应商联动反馈</h2>
+          <button class="collapse-btn" type="button" aria-label="收起/展开">▾</button>
+        </div>
+        <div class="card-body">
+          <p class="fb-intro">
+            <b>离线协作流程：</b>
+            ① 您点「📤 导出待确认清单」发给供应商（对方拿到的就是一张 Excel，<b>供应商无需打开本网页</b>，直接在 Excel 里填「是否已完成发货」即可）→
+            ② 供应商把填好的 Excel 发回给您 →
+            ③ 您点「📥 导入反馈文件」选中该 Excel，系统按订单号把反馈合并进主表（供应商视图下也可自己打开本网页填，再点「📤 导出我的反馈」回传）。
+          </p>
+          <div class="fb-toolbar">
+            <label class="fb-supplier">
+              <span>当前视角：</span>
+              <select id="fb-supplier"></select>
+            </label>
+            <input id="fb-search" class="search" type="text" placeholder="🔍 按供应商名称筛选（多供应商总览时定位）" />
+            <div class="fb-btns">
+              <button id="btn-fb-export-list" class="btn small ghost manager-only" type="button">📤 导出待确认清单</button>
+              <button id="btn-fb-import" class="btn small manager-only" type="button">📥 导入反馈文件</button>
+              <button id="btn-fb-export-all" class="btn small ghost manager-only" type="button">📤 导出全部反馈</button>
+              <button id="btn-export-supplier-snap" class="btn small manager-only" type="button">📤 导出供应商专属快照</button>
+              <button id="btn-export-myfb" class="btn small supplier-only" type="button" hidden>📤 导出我的反馈</button>
+              <input type="file" id="file-fb" accept=".xlsx,.xls,.csv" hidden />
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table id="table-feedback"></table>
+          </div>
+          <div class="pager" id="fb-pager"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <span>🧸 物流倒计时预警台 · 离线版</span>
+    <span class="foot-note">订单号 / 快递单号全程以文本保存，绝不被改变</span>
+  </footer>
+
+  <script src="js/engine.js"></script>
+  <script src="js/xlsx_io.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
